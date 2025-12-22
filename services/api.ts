@@ -1,12 +1,19 @@
 import axios from 'axios';
+import { Platform } from 'react-native';
 
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
+// For web, use localhost, for mobile, use the local IP
+const isWeb = Platform.OS === 'web';
+const LOCAL_IP = '192.168.29.3'; // Your local IP address
+const PORT = '7224';
 
-if (!API_BASE_URL) throw new Error('API base URL not defined');
+const API_BASE_URL = isWeb 
+  ? `http://localhost:${PORT}` 
+  : `http://${LOCAL_IP}:${PORT}`;
 
 const axiosInstance = axios.create({
   baseURL: API_BASE_URL,
   headers: { 'Content-Type': 'application/json' },
+  timeout: 10000, // 10 seconds timeout
 });
 
 const api = {

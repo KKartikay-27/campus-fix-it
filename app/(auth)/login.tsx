@@ -1,10 +1,11 @@
-import { View, Text, StyleSheet, Alert } from 'react-native';
+import { Link, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { useAuth } from '../../context/AuthContext';
-import { useRouter, Link } from 'expo-router';
-import AppInput from '../../components/AppInput';
+import { Alert, StyleSheet, Text, View } from 'react-native';
 import AppButton from '../../components/AppButton';
+import AppInput from '../../components/AppInput';
+import PasswordInput from '../../components/PasswordInput';
 import { Colors } from '../../constants/theme';
+import { useAuth } from '../../context/AuthContext';
 
 export default function Login() {
   const router = useRouter();
@@ -42,7 +43,11 @@ export default function Login() {
         <Text style={styles.tagline}>Report. Track. Resolve.</Text>
 
         <AppInput placeholder="Email" value={email} onChangeText={setEmail} />
-        <AppInput placeholder="Password" secureTextEntry value={password} onChangeText={setPassword} />
+        <PasswordInput
+          placeholder="Password"
+          value={password}
+          onChangeText={setPassword}
+        />
 
         <AppButton title={loading ? 'Logging in...' : 'Login'} onPress={handleLogin} disabled={loading} />
 

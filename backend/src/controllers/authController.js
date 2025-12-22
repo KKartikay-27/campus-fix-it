@@ -8,7 +8,7 @@ import jwt from 'jsonwebtoken';
  */
 export const register = async (req, res) => {
   try {
-    const { name, email, password, role } = req.body;
+    const { name, email, password, role = 'student' } = req.body;
 
     // Check if user exists
     const existingUser = await User.findOne({ email });
@@ -30,9 +30,22 @@ export const register = async (req, res) => {
       role,
     });
 
+    // Generate JWT token
+    const token = jwt.sign(
+      { id: user._id, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    // Remove password from response
+    const userResponse = user.toObject();
+    delete userResponse.password;
+
     res.status(201).json({
       success: true,
       message: 'User registered successfully',
+      user: userResponse,
+      token
     });
   } catch (error) {
     res.status(500).json({

@@ -1,10 +1,11 @@
-import { View, Text, StyleSheet, Alert } from 'react-native';
+import { Link, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { useAuth } from '../../context/AuthContext';
-import { useRouter, Link } from 'expo-router';
-import AppInput from '../../components/AppInput';
+import { Alert, StyleSheet, Text, View } from 'react-native';
 import AppButton from '../../components/AppButton';
+import AppInput from '../../components/AppInput';
+import PasswordInput from '../../components/PasswordInput';
 import { Colors } from '../../constants/theme';
+import { useAuth } from '../../context/AuthContext';
 
 export default function Register() {
   const router = useRouter();
@@ -17,19 +18,28 @@ export default function Register() {
 
   const handleRegister = async () => {
     try {
+      if (!name || !email || !password) {
+        Alert.alert('Error', 'Please fill in all fields');
+        return;
+      }
+
       setLoading(true);
       const newUser = await register(name, email, password);
-
-      Alert.alert('Success', 'Account created successfully.');
-
-      // role-based navigation after register
-      if (newUser.role === 'admin') {
-        router.replace('/(admin)');
-      } else {
-        router.replace('/(student)');
+      
+      if (newUser) {
+        Alert.alert('Success', 'Account created successfully!', [
+          {
+            text: 'OK',
+            onPress: () => {
+              // Navigate based on user role
+              router.replace(newUser.role === 'admin' ? '/(admin)' : '/(student)');
+            }
+          }
+        ]);
       }
     } catch (error: any) {
-      Alert.alert('Registration failed', error.message || 'Something went wrong');
+      console.error('Registration error:', error);
+      Alert.alert('Error', error.message || 'Registration failed. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -43,9 +53,8 @@ export default function Register() {
         <View style={styles.form}>
           <AppInput placeholder="Name" value={name} onChangeText={setName} />
           <AppInput placeholder="Email" value={email} onChangeText={setEmail} />
-          <AppInput
+          <PasswordInput
             placeholder="Password"
-            secureTextEntry
             value={password}
             onChangeText={setPassword}
           />
