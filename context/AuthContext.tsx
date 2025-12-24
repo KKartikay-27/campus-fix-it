@@ -1,6 +1,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createContext, useContext, useEffect, useState } from 'react';
-import api from '../services/api';
+import { authApi } from '../services/authApi';
+import { useRouter } from 'expo-router';
+
+const router = useRouter();
 
 const AuthContext = createContext<any>(null);
 
@@ -14,49 +17,40 @@ export const AuthProvider = ({ children }: any) => {
   }, []);
 
   const loadUser = async () => {
-    const storedToken = await AsyncStorage.getItem('token');
-    const storedUser = await AsyncStorage.getItem('user');
-
-    if (storedToken && storedUser) {
-      setToken(storedToken);
-      setUser(JSON.parse(storedUser));
+    const t = await AsyncStorage.getItem('token');
+    const u = await AsyncStorage.getItem('user');
+    if (t && u) {
+      setToken(t);
+      setUser(JSON.parse(u));
     }
-
     setLoading(false);
   };
 
   const register = async (name: string, email: string, password: string) => {
-    const res = await api.register(name, email, password);
-  
-    if (!res.data.success) throw new Error(res.data.message);
-  
-    setToken(res.data.token);
-    setUser(res.data.user);
-  
-    await AsyncStorage.setItem('token', res.data.token);
-    await AsyncStorage.setItem('user', JSON.stringify(res.data.user));
-  
-    return res.data.user; // ← return user for immediate use
-  };  
-
-  const login = async (email: string, password: string) => {
-    const res = await api.login(email, password);
-
-    if (!res.data.success) throw new Error(res.data.message);
-
-    setToken(res.data.token);
-    setUser(res.data.user);
-
-    await AsyncStorage.setItem('token', res.data.token);
-    await AsyncStorage.setItem('user', JSON.stringify(res.data.user));
-
-    return res.data.user;
+    const { data } = await authApi.register(name, email, password);
+    setToken(data.token);
+    setUser(data.user);
+    await AsyncStorage.setItem('token', data.token);
+    await AsyncStorage.setItem('user', JSON.stringify(data.user));
+    return data.user;
   };
 
+  const login = async (email: string, password: string) => {
+    const { data } = await authApi.login(email, password);
+    setToken(data.token);
+    setUser(data.user);
+    await AsyncStorage.setItem('token', data.token);
+    await AsyncStorage.setItem('user', JSON.stringify(data.user));
+    return data.user;
+  };
+
+
   const logout = async () => {
+    await AsyncStorage.removeItem('token');
     setUser(null);
     setToken(null);
-    await AsyncStorage.clear();
+
+    router.replace('/(auth)/login');
   };
 
   return (

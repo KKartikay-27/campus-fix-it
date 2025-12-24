@@ -27,7 +27,11 @@ export default function Login() {
         router.replace('/(student)');
       }
     } catch (error: any) {
-      Alert.alert('Login failed', 'Invalid email or password');
+      if (error.message === 'Network Error' || error.message.includes('network')) {
+        Alert.alert('Network Error', 'Unable to connect to the server. Please check your internet connection.');
+      } else {
+        Alert.alert('Login failed', 'Invalid email or password');
+      }
     } finally {
       setLoading(false);
     }
