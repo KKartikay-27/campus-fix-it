@@ -406,13 +406,15 @@ jobs:
 
       - name: Run container health check
         run: |
-          docker run -d --name test-container \
-            -p 7224:7224 \
-            -e MONGO_URI=${{ secrets.MONGO_URI_TEST }} \
-            -e JWT_SECRET=${{ secrets.JWT_SECRET_TEST }} \
+          IMAGE="${{ secrets.DOCKERHUB_USERNAME }}/campus-fixit-backend:latest"
+          echo "Using image: $IMAGE"
+          docker run -d --name test-container -p 7224:7224 \
+            -e MONGO_URI="${{ secrets.MONGO_URI_TEST }}" \
+            -e JWT_SECRET="${{ secrets.JWT_SECRET_TEST }}" \
             -e PORT=7224 \
-            "${{ secrets.DOCKERHUB_USERNAME }}/campus-fixit-backend:latest"
+            $IMAGE
           sleep 10
+
 
       - name: Test container health endpoint
         run: |
