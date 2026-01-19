@@ -1,0 +1,18 @@
+diff --git a/node_modules/ip/lib/ip.js b/node_modules/ip/lib/ip.js
+index 9022443..cd38f94 100644
+--- a/node_modules/ip/lib/ip.js
++++ b/node_modules/ip/lib/ip.js
+@@ -333,8 +333,11 @@ ip.isPrivate = function (addr) {
+     || /^::$/.test(addr);
+ };
+ 
+-ip.isPublic = function (addr) {
+-  return !ip.isPrivate(addr);
++exports.isPublic = function(addr) {
++  // START PATCH: Fix for GHSA-2p57-rm9w-gvfp (SSRF Vulnerability)
++  if (addr === '0.0.0.0' || addr === '::' || addr === '0') return false;
++  // END PATCH
++  return !exports.isPrivate(addr);
+ };
+ 
+ ip.isLoopback = function (addr) {
