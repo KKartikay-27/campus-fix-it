@@ -205,7 +205,7 @@ jobs:
           target: http://localhost:7224
           fail_action: false
           allow_issue_writing: true
-          artifact_name: zapreports-${{ github.run_id }}
+          
 
       - name: Append ZAP summary to job summary
         if: always()
@@ -220,17 +220,7 @@ jobs:
             echo "No report_md.md found." >> $GITHUB_STEP_SUMMARY
           fi
 
-      - name: Upload ZAP reports
-        if: always()
-        continue-on-error: true
-        uses: actions/upload-artifact@v4
-        with:
-          name: zapreports-${{ github.run_id }}
-          path: |
-            report_html.html
-            report_md.md
-            report_json.json
-          retention-days: 14
+      
 
       - name: Cleanup port-forward
         if: always()
