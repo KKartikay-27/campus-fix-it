@@ -17,6 +17,10 @@ spec:
           image: PLACEHOLDER_IMAGE
           ports:
             - containerPort: 7224
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            readOnlyRootFilesystem: true
           env:
             - name: PORT
               value: "7224"
