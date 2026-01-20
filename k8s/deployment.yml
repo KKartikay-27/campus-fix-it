@@ -12,6 +12,10 @@ spec:
       labels:
         app: campus-fixit
     spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        runAsGroup: 1001
       volumes:
         - name: tmp
           emptyDir: {}
@@ -66,4 +70,6 @@ spec:
           securityContext:
             allowPrivilegeEscalation: false
             runAsNonRoot: true
+            runAsUser: 1001
+            runAsGroup: 1001
             readOnlyRootFilesystem: false
