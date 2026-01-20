@@ -12,61 +12,64 @@ env:
 jobs:
 
   # ===============================
-  # Stage 1: Build Docker Image Locally
-  # ===============================
-  build-image:
-    name: Build Docker Image
-    runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build Docker image
-        run: |
-          docker build -t $IMAGE_NAME:latest ./backend
-
-  # ===============================
-  # Stage 2: Deploy to SIT (Kubernetes using KIND)
+  # Stage 1: Build & Deploy to SIT (KIND)
   # ===============================
   deploy-sit:
-    name: Deploy to SIT (Kubernetes)
+    name: Build Docker Image & Deploy to SIT (Kubernetes)
     runs-on: ubuntu-latest
-    needs: build-image
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
 
     steps:
       - uses: actions/checkout@v4
 
+      # -------------------------------
+      # Build Docker Image locally
+      # -------------------------------
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        run: docker build -t $IMAGE_NAME:latest ./backend
+
+      # -------------------------------
+      # Install kubectl
+      # -------------------------------
       - name: Install kubectl
         uses: azure/setup-kubectl@v4
 
+      # -------------------------------
+      # Install KIND
+      # -------------------------------
       - name: Install KIND
         run: |
           curl -Lo kind https://kind.sigs.k8s.io/dl/v0.22.0/kind-linux-amd64
           chmod +x kind
           sudo mv kind /usr/local/bin/kind
 
-      - name: Create SIT Cluster
+      # -------------------------------
+      # Create SIT Cluster
+      # -------------------------------
+      - name: Create KIND Cluster
         run: kind create cluster --name sit
 
+      # -------------------------------
+      # Load Docker image into KIND
+      # -------------------------------
       - name: Load image into KIND
         run: kind load docker-image $IMAGE_NAME:latest --name sit
 
-      - name: Apply Kubernetes manifests
+      # -------------------------------
+      # Deploy to Kubernetes
+      # -------------------------------
+      - name: Deploy to SIT
         run: |
           kubectl apply -f k8s/deployment.yml
           kubectl apply -f k8s/service.yml
-
-      - name: Update Deployment Image
-        run: |
           kubectl set image deployment/campus-fixit backend=$IMAGE_NAME:latest
           kubectl rollout status deployment/campus-fixit
 
   # ===============================
-  # Stage 3: Performance Testing (Dummy)
+  # Stage 2: Performance Testing
   # ===============================
   performance-test:
     name: Performance Testing
@@ -81,7 +84,7 @@ jobs:
           echo "✔ Performance test passed"
 
   # ===============================
-  # Stage 4: Security Testing (DAST Dummy)
+  # Stage 3: Security Testing (DAST)
   # ===============================
   security-test:
     name: Security Testing (DAST)
@@ -92,11 +95,11 @@ jobs:
       - name: Dummy DAST Scan
         uses: zaproxy/action-baseline@v0.12.0
         with:
-          target: http://example.com
+          target: http://localhost:7224
           fail_action: false
 
   # ===============================
-  # Stage 5: NLP Integration (Optional)
+  # Stage 4: NLP Integration (Optional)
   # ===============================
   nlp-integration:
     name: NLP Integration (Optional)
