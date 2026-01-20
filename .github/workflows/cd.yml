@@ -203,6 +203,8 @@ jobs:
         with:
           target: http://localhost:7224
           fail_action: false
+          artifact: false
+          artifact_name: zap-scan
 
       - name: Upload ZAP reports
         if: always()
