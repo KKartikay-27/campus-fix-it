@@ -78,7 +78,6 @@ jobs:
       - name: Apply SIT secrets
         run: |
           kubectl create secret generic campus-fixit-secrets \
-            --from-literal=MONGO_URI="${{ secrets.MONGO_URI_SIT }}" \
             --from-literal=JWT_SECRET="${{ secrets.JWT_SECRET_SIT }}" \
             --dry-run=client -o yaml | kubectl apply -f -
 

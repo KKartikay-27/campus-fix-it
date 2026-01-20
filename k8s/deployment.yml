@@ -24,11 +24,6 @@ spec:
                 configMapKeyRef:
                   name: campus-fixit-config
                   key: PORT
-            - name: MONGO_URI
-              valueFrom:
-                secretKeyRef:
-                  name: campus-fixit-secrets
-                  key: MONGO_URI
             - name: JWT_SECRET
               valueFrom:
                 secretKeyRef:
