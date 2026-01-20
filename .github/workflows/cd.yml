@@ -76,12 +76,37 @@ jobs:
       # -------------------------------
       - name: Deploy to SIT
         run: |
-          kubectl apply -f k8s/configmap.yml
-          kubectl apply -f k8s/deployment.yml
-          kubectl apply -f k8s/service.yml
-          kubectl set image deployment/campus-fixit backend=$IMAGE_NAME:latest
-          kubectl rollout status deployment/campus-fixit --timeout=180s
-          kubectl wait --for=condition=available deployment/campus-fixit --timeout=120s
+          set -o pipefail
+          deploy_and_wait() {
+            kubectl apply -f k8s/configmap.yml
+            kubectl apply -f k8s/deployment.yml
+            kubectl apply -f k8s/service.yml
+            kubectl set image deployment/campus-fixit backend=$IMAGE_NAME:latest
+            echo "--- Pods after apply ---"
+            kubectl get pods -o wide
+            echo "--- Waiting for rollout ---"
+            kubectl rollout status deployment/campus-fixit --timeout=300s
+            kubectl wait --for=condition=available deployment/campus-fixit --timeout=180s
+          }
+          diagnostics() {
+            echo "\n===== DIAGNOSTICS: Deployment/Pods/Events ====="
+            kubectl describe deployment campus-fixit || true
+            kubectl get pods -o wide || true
+            for p in $(kubectl get pods -o name | grep campus-fixit || true); do
+              echo "\n---- logs for $p ----"
+              kubectl logs $p --tail=200 || true
+              echo "\n---- describe $p ----"
+              kubectl describe $p || true
+            done
+            echo "\n---- Events ----"
+            kubectl get events --sort-by=.lastTimestamp | tail -n 100 || true
+          }
+          if ! deploy_and_wait; then
+            echo "❌ Rollout failed. Gathering diagnostics..."
+            diagnostics
+            exit 1
+          fi
+          echo "✅ SIT deployment available."
 
       # -------------------------------
       # Simple Performance Test (dummy)
