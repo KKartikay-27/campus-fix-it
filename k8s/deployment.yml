@@ -18,7 +18,7 @@ spec:
       containers:
         - name: backend
           image: IMAGE_PLACEHOLDER  # Will be replaced by kubectl set image
-          imagePullPolicy: Never
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 7224
           volumeMounts:
@@ -30,11 +30,8 @@ spec:
                 configMapKeyRef:
                   name: campus-fixit-config
                   key: PORT
-            - name: JWT_SECRET
-              valueFrom:
-                secretKeyRef:
-                  name: campus-fixit-secrets
-                  key: JWT_SECRET
+            - name: NODE_ENV
+              value: "production"
           readinessProbe:
             httpGet:
               path: /
@@ -69,4 +66,4 @@ spec:
           securityContext:
             allowPrivilegeEscalation: false
             runAsNonRoot: true
-            readOnlyRootFilesystem: true
+            readOnlyRootFilesystem: false

@@ -121,11 +121,20 @@ jobs:
             # If pods are stuck in ContainerCreating for too long, show describe and fail early
             for i in {1..30}; do
               kubectl get pods -l app=campus-fixit -o wide || true
-              creating=$(kubectl get pods -l app=campus-fixit --no-headers 2>/dev/null | awk '{print $3}' | grep -c ContainerCreating || true)
-              running=$(kubectl get pods -l app=campus-fixit --no-headers 2>/dev/null | awk '{print $3}' | grep -c Running || true)
+              phase=$(kubectl get pods -l app=campus-fixit --no-headers 2>/dev/null | awk '{print $3}' | tr '\n' ' ')
+              creating=$(echo "$phase" | grep -c ContainerCreating || true)
+              running=$(echo "$phase" | grep -c Running || true)
+              cfgerr=$(echo "$phase" | grep -c CreateContainerConfigError || true)
               if [ "$running" -ge 1 ]; then
                 echo "Pod is running, continuing to rollout wait."
                 break
+              fi
+              if [ "$cfgerr" -ge 1 ]; then
+                echo "❌ Pod in CreateContainerConfigError. Dumping describe and exiting."
+                for p in $(kubectl get pods -l app=campus-fixit -o name); do
+                  kubectl describe $p || true
+                done
+                exit 1
               fi
               if [ "$i" -eq 30 ] && [ "$creating" -ge 1 ]; then
                 echo "❌ Pod stuck in ContainerCreating. Dumping describe and exiting."
