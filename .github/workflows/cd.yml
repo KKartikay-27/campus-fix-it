@@ -90,9 +90,15 @@ jobs:
           set -o pipefail
           deploy_and_wait() {
             kubectl apply -f k8s/configmap.yml
-            kubectl apply -f k8s/deployment.yml
             kubectl apply -f k8s/service.yml
+            # Apply deployment, immediately scale to 0 to avoid starting placeholder image
+            kubectl apply -f k8s/deployment.yml
+            kubectl scale deployment/campus-fixit --replicas=0
+            # Ensure no pods are running from the placeholder ReplicaSet
+            kubectl delete pods -l app=campus-fixit --ignore-not-found
+            # Set the correct image and scale up to 1
             kubectl set image deployment/campus-fixit backend=$IMAGE_NAME:latest
+            kubectl scale deployment/campus-fixit --replicas=1
             echo "--- Objects after apply (deploy/rs/pods) ---"
             kubectl get deploy,rs,pods -o wide || true
             echo "--- Recent events ---"
