@@ -203,14 +203,14 @@ jobs:
         with:
           target: http://localhost:7224
           fail_action: false
-          artifact: false
-          artifact_name: zap-scan
+          artifact_name: zap
 
       - name: Upload ZAP reports
         if: always()
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
-          name: zap-baseline-reports
+          name: zap_reports
           path: |
             report_html.html
             report_md.md
