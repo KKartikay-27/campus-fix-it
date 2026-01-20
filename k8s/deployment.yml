@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: campus-fixit
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: campus-fixit
+  template:
+    metadata:
+      labels:
+        app: campus-fixit
+    spec:
+      containers:
+        - name: backend
+          image: PLACEHOLDER_IMAGE
+          ports:
+            - containerPort: 7224
+          env:
+            - name: PORT
+              value: "7224"
