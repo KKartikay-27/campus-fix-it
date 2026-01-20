@@ -72,6 +72,19 @@ jobs:
       - name: Load image into KIND
         run: kind load docker-image $IMAGE_NAME:latest --name sit
 
+      - name: Verify image present in KIND node
+        run: |
+          echo "Images in container runtime (crictl) inside sit-control-plane:"
+          docker exec sit-control-plane crictl images | head -n 5 || true
+          echo "Searching for $IMAGE_NAME:latest in node images:"
+          if docker exec sit-control-plane crictl images | grep -q "${IMAGE_NAME}.*latest"; then
+            echo "✅ Image present in KIND node runtime"
+          else
+            echo "❌ Image not visible in KIND node runtime; reloading"
+            kind load docker-image $IMAGE_NAME:latest --name sit
+            docker exec sit-control-plane crictl images | grep "${IMAGE_NAME}.*latest" || (echo "❌ Still not present" && exit 1)
+          fi
+
       # -------------------------------
       # Create/Update SIT Secrets in cluster
       # -------------------------------
@@ -104,6 +117,25 @@ jobs:
             kubectl get events --sort-by=.lastTimestamp | tail -n 20 || true
             echo "Sleeping 5s to allow scheduler to create pods..."
             sleep 5
+            echo "--- Checking pod creation status ---"
+            # If pods are stuck in ContainerCreating for too long, show describe and fail early
+            for i in {1..30}; do
+              kubectl get pods -l app=campus-fixit -o wide || true
+              creating=$(kubectl get pods -l app=campus-fixit --no-headers 2>/dev/null | awk '{print $3}' | grep -c ContainerCreating || true)
+              running=$(kubectl get pods -l app=campus-fixit --no-headers 2>/dev/null | awk '{print $3}' | grep -c Running || true)
+              if [ "$running" -ge 1 ]; then
+                echo "Pod is running, continuing to rollout wait."
+                break
+              fi
+              if [ "$i" -eq 30 ] && [ "$creating" -ge 1 ]; then
+                echo "❌ Pod stuck in ContainerCreating. Dumping describe and exiting."
+                for p in $(kubectl get pods -l app=campus-fixit -o name); do
+                  kubectl describe $p || true
+                done
+                exit 1
+              fi
+              sleep 2
+            done
             echo "--- Waiting for rollout ---"
             kubectl rollout status deployment/campus-fixit --timeout=300s
             kubectl wait --for=condition=available deployment/campus-fixit --timeout=180s

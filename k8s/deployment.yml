@@ -12,12 +12,18 @@ spec:
       labels:
         app: campus-fixit
     spec:
+      volumes:
+        - name: tmp
+          emptyDir: {}
       containers:
         - name: backend
           image: IMAGE_PLACEHOLDER  # Will be replaced by kubectl set image
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Never
           ports:
             - containerPort: 7224
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
           env:
             - name: PORT
               valueFrom:
