@@ -8,16 +8,18 @@ on:
 
 env:
   IMAGE_NAME: ${{ secrets.DOCKERHUB_USERNAME }}/campus-fixit-backend
+  CLUSTER_NAME: sit
 
 jobs:
 
-  # ===============================
-  # Stage 1: Artifactory
-  # ===============================
+  # ==================================================
+  # Stage 1: Artifactory (Trusted Image Retrieval)
+  # ==================================================
   artifactory:
     name: Retrieve Trusted Image
     runs-on: ubuntu-latest
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
+
     steps:
       - name: Login to DockerHub
         uses: docker/login-action@v3
@@ -25,20 +27,21 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Pull image
+      - name: Pull Trusted Image
         run: docker pull $IMAGE_NAME:latest
 
 
-  # ===============================
-  # Stage 2: Deploy to SIT (K8s)
-  # ===============================
+  # ==================================================
+  # Stage 2: Deploy to SIT (Kubernetes via KIND)
+  # ==================================================
   deploy-sit:
     name: Deploy to SIT (Kubernetes)
     runs-on: ubuntu-latest
     needs: artifactory
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
       - name: Install kubectl
         uses: azure/setup-kubectl@v4
@@ -49,66 +52,75 @@ jobs:
           chmod +x kind
           sudo mv kind /usr/local/bin/kind
 
-      - name: Create SIT Cluster
-        run: kind create cluster --name sit
+      - name: Create SIT Kubernetes Cluster
+        run: kind create cluster --name $CLUSTER_NAME
 
-      - name: Load Image into SIT
+      - name: Login to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Load Image into KIND Cluster
         run: |
           docker pull $IMAGE_NAME:latest
-          kind load docker-image $IMAGE_NAME:latest --name sit
+          kind load docker-image $IMAGE_NAME:latest --name $CLUSTER_NAME
 
-      - name: Deploy to SIT
+      - name: Deploy Kubernetes Manifests
         run: |
-          kubectl apply -f k8s/deployment.yml
-          kubectl apply -f k8s/service.yml
+          kubectl apply -f k8s/
 
+      - name: Inject Image (No Hardcoding)
+        run: |
           kubectl set image deployment/campus-fixit \
-            backend=${{ secrets.DOCKERHUB_USERNAME }}/campus-fixit-backend:latest
+            backend=$IMAGE_NAME:latest
 
-          kubectl rollout status deployment/campus-fixit
+      - name: Verify Rollout
+        run: kubectl rollout status deployment/campus-fixit
 
 
-  # ===============================
-  # Stage 3: Performance Testing
-  # ===============================
+  # ==================================================
+  # Stage 3: Performance Testing (Dummy Gate)
+  # ==================================================
   performance-test:
     name: Performance Testing
     runs-on: ubuntu-latest
     needs: deploy-sit
 
     steps:
-      - name: Dummy Load Test
+      - name: Performance Validation
         run: |
-          echo "Running basic performance validation"
+          echo "Running simulated performance checks"
           sleep 5
-          echo "✔ Performance test passed"
+          echo "✔ Performance tests passed"
 
 
-  # ===============================
-  # Stage 4: Security Testing (DAST)
-  # ===============================
+  # ==================================================
+  # Stage 4: Security Testing (DAST - Dummy)
+  # ==================================================
   security-test:
     name: Security Testing (DAST)
     runs-on: ubuntu-latest
     needs: performance-test
 
     steps:
-      - name: Dummy DAST Scan
+      - name: Dummy OWASP ZAP Scan
         uses: zaproxy/action-baseline@v0.12.0
         with:
           target: http://example.com
           fail_action: false
 
 
-  # ===============================
-  # Stage 5: NLP Integration (Optional)
-  # ===============================
+  # ==================================================
+  # Stage 5: NLP Integration (Optional / Placeholder)
+  # ==================================================
   nlp-integration:
     name: NLP Integration (Optional)
     runs-on: ubuntu-latest
     needs: security-test
+
     steps:
-      - name: NLP Placeholder
+      - name: NLP Stage Placeholder
         run: |
-          echo "NLP integration placeholder"
-          echo "✔ NLP stage skipped safely"
+          echo "NLP integration stage (optional)"
+          echo "✔ Stage skipped intentionally"

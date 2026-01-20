@@ -14,13 +14,15 @@ spec:
     spec:
       containers:
         - name: backend
-          image: PLACEHOLDER_IMAGE
+          image: IMAGE_PLACEHOLDER
           ports:
             - containerPort: 7224
+          env:
+            - name: PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: campus-fixit-config
+                  key: PORT
           securityContext:
             allowPrivilegeEscalation: false
             runAsNonRoot: true
-            readOnlyRootFilesystem: true
-          env:
-            - name: PORT
-              value: "7224"
