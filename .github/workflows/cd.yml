@@ -55,6 +55,17 @@ jobs:
       - name: Create KIND Cluster
         run: kind create cluster --name sit
 
+      - name: Verify cluster is Ready
+        run: |
+          kubectl config current-context
+          kubectl cluster-info
+          echo "Waiting for nodes to be Ready..."
+          kubectl wait --for=condition=Ready nodes --all --timeout=120s
+          echo "Nodes:"
+          kubectl get nodes -o wide
+          echo "Kube-system pods:"
+          kubectl get pods -n kube-system
+
       # -------------------------------
       # Load Docker image into KIND
       # -------------------------------
@@ -82,8 +93,12 @@ jobs:
             kubectl apply -f k8s/deployment.yml
             kubectl apply -f k8s/service.yml
             kubectl set image deployment/campus-fixit backend=$IMAGE_NAME:latest
-            echo "--- Pods after apply ---"
-            kubectl get pods -o wide
+            echo "--- Objects after apply (deploy/rs/pods) ---"
+            kubectl get deploy,rs,pods -o wide || true
+            echo "--- Recent events ---"
+            kubectl get events --sort-by=.lastTimestamp | tail -n 20 || true
+            echo "Sleeping 5s to allow scheduler to create pods..."
+            sleep 5
             echo "--- Waiting for rollout ---"
             kubectl rollout status deployment/campus-fixit --timeout=300s
             kubectl wait --for=condition=available deployment/campus-fixit --timeout=180s

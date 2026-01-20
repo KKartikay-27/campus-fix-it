@@ -15,6 +15,7 @@ spec:
       containers:
         - name: backend
           image: IMAGE_PLACEHOLDER  # Will be replaced by kubectl set image
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 7224
           env:
