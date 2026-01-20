@@ -14,15 +14,12 @@ spec:
     spec:
       containers:
         - name: backend
-          image: IMAGE_PLACEHOLDER
+          image: IMAGE_PLACEHOLDER  # Will be replaced by kubectl set image
           ports:
             - containerPort: 7224
           env:
             - name: PORT
-              valueFrom:
-                configMapKeyRef:
-                  name: campus-fixit-config
-                  key: PORT
+              value: "7224"
           securityContext:
             allowPrivilegeEscalation: false
             runAsNonRoot: true

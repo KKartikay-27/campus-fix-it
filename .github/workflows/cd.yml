@@ -12,33 +12,31 @@ env:
 jobs:
 
   # ===============================
-  # Stage 1: Artifactory
+  # Stage 1: Build Docker Image Locally
   # ===============================
-  artifactory:
-    name: Retrieve Trusted Image
+  build-image:
+    name: Build Docker Image
     runs-on: ubuntu-latest
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     steps:
-      - name: Checkout repository
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Login to DockerHub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-      - name: Build Docker image locally
+      - name: Build Docker image
         run: |
           docker build -t $IMAGE_NAME:latest ./backend
 
   # ===============================
-  # Stage 2: Deploy to SIT (K8s with KIND)
+  # Stage 2: Deploy to SIT (Kubernetes using KIND)
   # ===============================
   deploy-sit:
     name: Deploy to SIT (Kubernetes)
     runs-on: ubuntu-latest
-    needs: artifactory
+    needs: build-image
+
     steps:
       - uses: actions/checkout@v4
 
@@ -54,40 +52,42 @@ jobs:
       - name: Create SIT Cluster
         run: kind create cluster --name sit
 
-      - name: Load image into SIT
+      - name: Load image into KIND
         run: kind load docker-image $IMAGE_NAME:latest --name sit
 
-      - name: Deploy to SIT
+      - name: Apply Kubernetes manifests
         run: |
           kubectl apply -f k8s/deployment.yml
           kubectl apply -f k8s/service.yml
 
-          kubectl set image deployment/campus-fixit \
-            backend=$IMAGE_NAME:latest
-
+      - name: Update Deployment Image
+        run: |
+          kubectl set image deployment/campus-fixit backend=$IMAGE_NAME:latest
           kubectl rollout status deployment/campus-fixit
 
   # ===============================
-  # Stage 3: Performance Testing
+  # Stage 3: Performance Testing (Dummy)
   # ===============================
   performance-test:
     name: Performance Testing
     runs-on: ubuntu-latest
     needs: deploy-sit
+
     steps:
       - name: Dummy Load Test
         run: |
-          echo "Running basic performance validation"
+          echo "Running basic performance validation..."
           sleep 5
           echo "✔ Performance test passed"
 
   # ===============================
-  # Stage 4: Security Testing (DAST)
+  # Stage 4: Security Testing (DAST Dummy)
   # ===============================
   security-test:
     name: Security Testing (DAST)
     runs-on: ubuntu-latest
     needs: performance-test
+
     steps:
       - name: Dummy DAST Scan
         uses: zaproxy/action-baseline@v0.12.0
@@ -102,6 +102,7 @@ jobs:
     name: NLP Integration (Optional)
     runs-on: ubuntu-latest
     needs: security-test
+
     steps:
       - name: NLP Placeholder
         run: |
