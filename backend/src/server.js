@@ -10,6 +10,19 @@ connectDB();
 
 const app = express();
 
+// Security hardening: headers
+app.disable('x-powered-by');
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  // Minimal CSP suitable for API-only responses
+  res.setHeader('Content-Security-Policy', "default-src 'self'");
+  // Tight default permissions
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  // Avoid caching dynamic API responses
+  res.setHeader('Cache-Control', 'no-store');
+  next();
+});
+
 // CORS configuration
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
