@@ -1,10 +1,5 @@
 name: CI Pipeline
 
-# Human note:
-# This workflow intentionally mirrors a production-grade DevSecOps pipeline.
-# Stages: checkout → lint → SAST → SCA → tests → build → docker build → image scan → runtime test → registry confirmation.
-# Keep the order; each stage is a quality gate. Comments are here to make it readable for reviewers.
-
 on:
   push:
     branches:
@@ -22,8 +17,6 @@ env:
   IMAGE_NAME: ${{ secrets.DOCKERHUB_USERNAME }}/campus-fixit-backend
 
 jobs:
-  # Stage 1: Checkout and Setup
-  # Why: Establish a clean workspace and cache dependencies for speed.
   checkout-and-setup:
     name: Checkout & Setup Runtime
     runs-on: ubuntu-latest
@@ -47,8 +40,6 @@ jobs:
           cache: 'npm'
           cache-dependency-path: package-lock.json
 
-  # Stage 2: Linting
-  # Why: Enforce code quality and surface style issues early (non-blocking but visible).
   lint:
     name: Code Linting
     runs-on: ubuntu-latest
@@ -100,8 +91,6 @@ jobs:
             frontend-eslint-report.json
           retention-days: 7
 
-  # Stage 3: SAST - Static Application Security Testing
-  # Why: Shift-left security to catch code-level vulnerabilities (OWASP Top 10 coverage).
   sast:
     name: SAST Security Scan
     runs-on: ubuntu-latest
@@ -137,8 +126,6 @@ jobs:
         with:
           sarif_file: semgrep.sarif
 
-  # Stage 4: SCA - Software Composition Analysis
-  # Why: Detect vulnerable dependencies and supply-chain risks before build.
   sca:
     name: Dependency Security Scan
     runs-on: ubuntu-latest
@@ -202,8 +189,6 @@ jobs:
             snyk-report.json
           retention-days: 30
 
-  # Stage 5: Unit Tests
-  # Why: Prevent regressions and validate core logic before building artifacts.
   unit-tests:
     name: Unit Tests
     runs-on: ubuntu-latest
@@ -254,8 +239,6 @@ jobs:
             coverage
           retention-days: 7
 
-  # Stage 6: Build
-  # Why: Fail fast on build/type errors prior to containerization.
   build:
     name: Build Application
     runs-on: ubuntu-latest
@@ -294,8 +277,6 @@ jobs:
         run: |
           npx tsc --noEmit && echo "Frontend TypeScript check passed"
 
-  # Stage 7: Docker Build
-  # Why: Produce immutable artifact; push only after quality gates.
   docker-build:
     name: Docker Build
     runs-on: ubuntu-latest
@@ -340,8 +321,6 @@ jobs:
       - name: Image digest
         run: echo "Image pushed with digest ${{ steps.build.outputs.digest }}"
 
-  # Stage 8: Container Image Scan
-  # Why: Block critical/high CVEs in the final runtime artifact.
   image-scan:
     name: Container Vulnerability Scan
     runs-on: ubuntu-latest
@@ -381,8 +360,6 @@ jobs:
           exit-code: '0'
           severity: 'CRITICAL,HIGH'
 
-  # Stage 9: Runtime Test
-  # Why: Prove the image actually runs and serves health/API endpoints.# Stage 9: Runtime Test
   runtime-test:
     name: Container Runtime Test
     runs-on: ubuntu-latest
@@ -435,7 +412,6 @@ jobs:
           docker stop test-container || true
           docker rm test-container || true
 
-  # Stage 10: Registry Push (confirmation)
   registry-push:
     name: Confirm Registry Push
     runs-on: ubuntu-latest

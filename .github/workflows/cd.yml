@@ -10,10 +10,6 @@ env:
   IMAGE_NAME: ${{ secrets.DOCKERHUB_USERNAME }}/campus-fixit-backend
 
 jobs:
-
-  # ===============================
-  # Stage 1: Build & Deploy to SIT (KIND)
-  # ===============================
   deploy-sit:
     name: Build Docker Image & Deploy to SIT (Kubernetes)
     runs-on: ubuntu-latest
@@ -24,10 +20,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-
-      # -------------------------------
-      # Artifactory: Pull image from Docker Hub (artifact pickup)
-      # -------------------------------
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
         with:
@@ -37,24 +29,15 @@ jobs:
       - name: Pull image from registry
         run: docker pull $IMAGE_NAME:latest
 
-      # -------------------------------
-      # Install kubectl
-      # -------------------------------
       - name: Install kubectl
         uses: azure/setup-kubectl@v4
-
-      # -------------------------------
-      # Install KIND
-      # -------------------------------
+        
       - name: Install KIND
         run: |
           curl -Lo kind https://kind.sigs.k8s.io/dl/v0.22.0/kind-linux-amd64
           chmod +x kind
           sudo mv kind /usr/local/bin/kind
 
-      # -------------------------------
-      # Create SIT Cluster
-      # -------------------------------
       - name: Create KIND Cluster
         run: kind create cluster --name sit
 
@@ -69,9 +52,6 @@ jobs:
           echo "Kube-system pods:"
           kubectl get pods -n kube-system
 
-      # -------------------------------
-      # Load Docker image into KIND
-      # -------------------------------
       - name: Load image into KIND
         run: kind load docker-image $IMAGE_NAME:latest --name sit
 
@@ -88,18 +68,12 @@ jobs:
             docker exec sit-control-plane crictl images | grep "${IMAGE_NAME}.*latest" || (echo "❌ Still not present" && exit 1)
           fi
 
-      # -------------------------------
-      # Create/Update SIT Secrets in cluster
-      # -------------------------------
       - name: Apply SIT secrets
         run: |
           kubectl create secret generic campus-fixit-secrets \
             --from-literal=JWT_SECRET="${{ secrets.JWT_SECRET_SIT }}" \
             --dry-run=client -o yaml | kubectl apply -f -
 
-      # -------------------------------
-      # Deploy to Kubernetes
-      # -------------------------------
       - name: Deploy to SIT
         run: |
           set -o pipefail
@@ -172,9 +146,6 @@ jobs:
           fi
           echo "✅ SIT deployment available."
 
-      # -------------------------------
-      # Simple Performance Test (dummy)
-      # -------------------------------
       - name: Port-forward service for tests
         run: |
           kubectl get svc campus-fixit-service
@@ -195,9 +166,6 @@ jobs:
           done
           echo "✔ Performance probe completed"
 
-      # -------------------------------
-      # Dummy DAST (placeholder)
-      # -------------------------------
       - name: Dummy DAST
         uses: zaproxy/action-baseline@v0.12.0
         continue-on-error: true
@@ -227,9 +195,6 @@ jobs:
         run: |
           kill $(cat /tmp/pf.pid) 2>/dev/null || true
 
-  # ===============================
-  # Stage 2: NLP Integration (Optional Placeholder)
-  # ===============================
   nlp-integration:
     name: NLP Integration (Optional)
     runs-on: ubuntu-latest
